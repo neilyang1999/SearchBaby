@@ -4,8 +4,8 @@ include_once 'Mysql.php';
 class MyCallback
 {
     private $postObj;
-    private $fromUsername;//订阅公众账号的人
-    private $toUsername;//我自己
+    private $follower;//订阅公众账号的人
+    private $myself;//我自己
 	public function valid()
     {
         $echoStr = $_GET["echostr"];
@@ -30,8 +30,11 @@ class MyCallback
       	//extract post data
 		if (!empty($postStr)){
             $this->postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $this->fromUsername = $this->postObj->FromUserName;
-            $this->toUsername = $this->postObj->ToUserName;
+            $this->follower = $this->postObj->FromUserName;
+            $this->myself = $this->postObj->ToUserName;
+
+            $this->checkUser();
+
             $msgType = $this->postObj->MsgType;
             if($msgType == "text"){
                 $content = trim($this->postObj->Content);
@@ -60,11 +63,11 @@ class MyCallback
                     }
                 }
             }else if($msgType == "location"){
-                $this->sendMap();
+                $this->setLocation();
             }else if($msgType == "event"){
                 $event = $this->postObj->Event;
                 if($event == "subscribe"){
-                    $this->userInit();
+                    $this->checkUser();
                 }
             }else{
                 $this->sendTypeError();
@@ -104,13 +107,13 @@ class MyCallback
 </xml>";             
         $textTpl = trim($textTpl);
         $contentStr = trim($contentStr);
-       $resultStr = sprintf($textTpl, $this->fromUsername, $this->toUsername, $time, $msgType, $contentStr);
+       $resultStr = sprintf($textTpl, $this->follower, $this->myself, $time, $msgType, $contentStr);
         echo $resultStr;
     }
 
     private function sendhelp(){
         $contentStr = "
-寻宝江湖是一款基于LBS的沙盒小游戏，游戏地图即现实地图，当您所在位置对应的虚拟世界存在物品，则您可以通过相应命令获取到.对于您已经拥有的物品，您可以对他们进行拆解，或者合成新的物品。下面是一些您可以使用的命令：
+    寻宝江湖是一款基于LBS的沙盒小游戏，游戏地图即现实地图，当您所在位置对应的虚拟世界存在物品，则您可以通过相应命令获取到.对于您已经拥有的物品，您可以对他们进行拆解，或者合成新的物品。下面是一些您可以使用的命令：
 help：查看此帮助；
 status：查看您已有的物品，还能携带的物品数，及其他个人资料；
 show：查看附近是否有物品可以获取。发送此命令前您需要先上传您的位置；
@@ -118,18 +121,18 @@ get [物品名称 物品多称]...：获取物品，多个物品请用空格隔�
 put [物品名称 物品多称]...：放下（扔掉）物品，多个物品请用空格隔开，不加物品名称则默认为您物品栏中最后一个物品。您放下的任何物品可以被任何一个人捡起；
 merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品必需是您已经持有的物品；
 
-目前仅完成help命令。
-注意：该游戏还在开发中，如果您无帮助开发者测试的意愿，请及时退订。如您有任何想法，欢迎回复告知我。
+    注意：该游戏还在开发中，如果您无帮助开发者测试的意愿，请及时退订。如您有任何想法，欢迎回复告知我。
 ";
         $this->echoText($contentStr);
     }
     private function sendEmpty(){
-    	$contentStr = "欢迎来到寻宝江湖，发送help可查看游戏玩法。";
+    	$contentStr = "欢迎来到寻宝江湖，发送help可查看游戏玩法。
+    注意：该游戏还在开发中，如果您无帮助开发者测试的意愿，请及时退订。如您有任何想法，欢迎回复告知我。";
         $this->echoText($contentStr);
     }
 
-    private function userInit(){
-        $userId = $this->FromUserName;
+    private function checkUser(){
+        $userId = $this->follower;
         $query = "select id from users where id='$userId'";
         $result = $db->query($query);
         if(empty($result)){
@@ -144,12 +147,33 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     }
 
     private function sendTypeError(){
-        $this->uncomplete();
+        $contentStr = "目前尚不支持此类型消息。";
+        $this->echoText($contentStr);
     }
 
     private function uncomplete(){
         $contentStr = "该功能项未开发完成，敬请期待！";
         $this->echoText($contentStr);
+    }
+
+    private function sendStatus(){
+        $this->uncomplete();
+    }
+
+    private function sendShow(){
+        $this->uncomplete();
+    }
+    
+    private function removeGoods($goods){
+        $this->uncomplete();
+    }
+
+    private function getGoods($goods){
+        $this->uncomplete();
+    }
+
+    private function setLocation(){
+        $this->uncomplete();
     }
 
     
