@@ -17,6 +17,7 @@ CREATE TABLE map (
     x double NOT NULL,
     y double NOT NULL,
     goodid int(11) REFERENCES goods(id),
+    goodnum int(11),
     scale int(11),
     lable text,
     PRIMARY KEY (id)

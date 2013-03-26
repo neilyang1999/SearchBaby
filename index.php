@@ -1,4 +1,5 @@
 <?php
+include_once 'Mysql.php';
 //define your token
 define("TOKEN", "chlinyu");
 $wechatObj = new myCallback();
@@ -28,13 +29,30 @@ class myCallback
             $toUsername = $postObj->ToUserName;
             $msgType = $postObj->MsgType;
             if($msgType == "text"){
-                $keyword = trim($postObj->Content);
+                $content = trim($postObj->Content);
+                $keyword = explode(" ",$content);
                 if(empty( $keyword )){
                     $this->sendEmpty();
-                }else if($keyword == "help"){
-                    $this->sendHelp();
-                }else{
-                    echo "Input something...";
+                }else {
+                    switch ($keyword[0]){
+                        case "help":
+                            $this->sendHelp();
+                            break;
+                        case "status":
+                            $this->sendStatus();
+                            break;
+                        case "show":
+                            $this->sendShow();
+                            break;
+                        case "put":
+                            $this->removeGoods(array_slice($keyword,1));
+                            break;
+                        case "get":
+                            $this->getGoods(array_slice($keyword,1));
+                            break;
+                        default:
+                            $this->otherMsg(); 
+                    }
                 }
             }else if($msgType == "location"){
                 $this->sendMap();
@@ -88,8 +106,8 @@ class myCallback
             help：查看此帮助；
             status：查看您已有的物品，还能携带的物品数，及其他个人资料；
             show：查看附近是否有物品可以获取。发送此命令前您需要先上传您的位置；
-            get 物品名称 [物品多称]...：获取物品，多个物品请用空格隔开，该物品必须在您所在位置100米内；
-            put 物品名称 [物品多称]...：放下（扔掉）物品，多个物品请用空格隔开；
+            get [物品名称 物品多称]...：获取物品，多个物品请用空格隔开，该物品必须在您所在位置100米内，不加物品名称则默认为离您最近的物品；
+            put [物品名称 物品多称]...：放下（扔掉）物品，多个物品请用空格隔开，不加物品名称则默认为您物品栏中最后一个物品。您放下的任何物品可以被任何一个人捡起；
             merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品必需是您已经持有的物品；
             
             目前仅完成help命令。
@@ -100,6 +118,16 @@ class myCallback
     private function sendEmpty(){
     	$contentStr = "欢迎来到寻宝江湖，发送help可查看游戏玩法。";
         $this->echoText($contentStr);
+    }
+
+    private function userInit(){
+        $userId = $this->FromUserName;
+        $query = "select id from users where id='$userId'";
+        $result = $db->query($query);
+        if(empty($result)){
+            $query = "insert into users(id,x,y) values($userId,null,null)";
+            $db->query($query);
+        }
     }
 }
 ?>
