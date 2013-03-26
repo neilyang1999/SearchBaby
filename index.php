@@ -1,7 +1,7 @@
 <?php
 include_once 'Mysql.php';
 //define your token
-define("TOKEN", "chlinyu");
+define("TOKEN", $mytoken);
 $wechatObj = new myCallback();
 $wechatObj->responseMsg();
 class myCallback
@@ -24,6 +24,10 @@ class myCallback
 		//$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
         $postStr = file_get_contents('php://input');
 
+        //测试模式
+        //include_once 'test.php';
+        //$postStr = $xml_data;
+
         //将接收到的数据写入log方便调试
         include_once 'file.php';
         $fileHandle = new rwFile("receive.log");
@@ -31,12 +35,12 @@ class myCallback
 
       	//extract post data
 		if (!empty($postStr)){
-            $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $fromUsername = $postObj->FromUserName;
-            $toUsername = $postObj->ToUserName;
-            $msgType = $postObj->MsgType;
+            $this->postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
+            $this->fromUsername = $this->postObj->FromUserName;
+            $this->toUsername = $this->postObj->ToUserName;
+            $msgType = $this->postObj->MsgType;
             if($msgType == "text"){
-                $content = trim($postObj->Content);
+                $content = trim($this->postObj->Content);
                 $keyword = explode(" ",$content);
                 if(empty( $keyword )){
                     $this->sendEmpty();
@@ -64,7 +68,7 @@ class myCallback
             }else if($msgType == "location"){
                 $this->sendMap();
             }else if($msgType == "event"){
-                $event = $postObj->Event;
+                $event = $this->postObj->Event;
                 if($event == "subscribe"){
                     $this->userInit();
                 }
@@ -95,14 +99,17 @@ class myCallback
     private function echoText($contentStr){
         $msgType = "text";
         $time = time();
-        $textTpl = "<xml>
-                    <ToUserName><![CDATA[%s]]></ToUserName>
-                    <FromUserName><![CDATA[%s]]></FromUserName>
-                    <CreateTime>%s</CreateTime>
-                    <MsgType><![CDATA[%s]]></MsgType>
-                    <Content><![CDATA[%s]]></Content>
-                    <FuncFlag>0</FuncFlag>
-                    </xml>";             
+        $textTpl = "
+<xml>
+<ToUserName><![CDATA[%s]]></ToUserName>
+<FromUserName><![CDATA[%s]]></FromUserName>
+<CreateTime>%s</CreateTime>
+<MsgType><![CDATA[%s]]></MsgType>
+<Content><![CDATA[%s]]></Content>
+<FuncFlag>0</FuncFlag>
+</xml>";             
+        $textTpl = trim($textTpl);
+    
        $resultStr = sprintf($textTpl, $this->fromUsername, $this->toUsername, $time, $msgType, $contentStr);
         echo $resultStr;
     }
@@ -141,5 +148,10 @@ class myCallback
         $contentStr = "对不起，您输入的命令我无法理解。";
         $this->echoText($contentStr);
     }
+
+    private function sendTypeError(){
+    }
+
+
 }
 ?>
