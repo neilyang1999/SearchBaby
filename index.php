@@ -1,7 +1,8 @@
 <?php
 include_once 'Mysql.php';
+include_once 'config.php';
 //define your token
-define("TOKEN", "chlinyu");
+define("TOKEN", $mytoken);
 $wechatObj = new myCallback();
 $wechatObj->responseMsg();
 class myCallback
@@ -21,7 +22,10 @@ class myCallback
     public function responseMsg()
     {
 		//get post data, May be due to the different environments
-		$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
+		//$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
+        $postStr = file_get_contents('php://input');
+
+
       	//extract post data
 		if (!empty($postStr)){
             $postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
@@ -96,7 +100,7 @@ class myCallback
                     <Content><![CDATA[%s]]></Content>
                     <FuncFlag>0</FuncFlag>
                     </xml>";             
-       $resultStr = sprintf($textTpl, $fromUsername, $toUsername, $time, $msgType, $contentStr);
+       $resultStr = sprintf($textTpl, $this->fromUsername, $this->toUsername, $time, $msgType, $contentStr);
         echo $resultStr;
     }
 
@@ -112,7 +116,7 @@ class myCallback
             
             目前仅完成help命令。
             注意：该游戏还在开发中，如果您无帮助开发者测试的意愿，请及时退订。如您有任何想法，欢迎回复告知我。
-            "
+            ";
         $this->echoText($contentStr);
     }
     private function sendEmpty(){
@@ -128,6 +132,11 @@ class myCallback
             $query = "insert into users(id,x,y) values($userId,null,null)";
             $db->query($query);
         }
+    }
+
+    private function otherMsg(){
+        $contentStr = "对不起，您输入的命令我无法理解。";
+        $this->echoText($contentStr);
     }
 }
 ?>
