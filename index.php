@@ -1,8 +1,7 @@
 <?php
 include_once 'Mysql.php';
-include_once 'config.php';
 //define your token
-define("TOKEN", $mytoken);
+define("TOKEN", "chlinyu");
 $wechatObj = new myCallback();
 $wechatObj->responseMsg();
 class myCallback
@@ -25,6 +24,10 @@ class myCallback
 		//$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
         $postStr = file_get_contents('php://input');
 
+        //将接收到的数据写入log方便调试
+        include_once 'file.php';
+        $fileHandle = new rwFile("receive.log");
+        $fileHandle->write($postStr);
 
       	//extract post data
 		if (!empty($postStr)){
