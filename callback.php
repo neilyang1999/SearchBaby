@@ -1,5 +1,11 @@
 <?php
-
+/*************************************************************************
+ File Name: Mysql.php
+ Author: chliny
+ mail: chliny11@gmail.com
+ Created Time: 2013年03月26日 星期二 17时51分47秒
+ ************************************************************************/
+ 
 class MyCallback
 {
     private $postObj;
@@ -183,7 +189,7 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $y = $location['y'];
         $label = $location['label'];
 
-        $query = "select goods.name from have join goods on have.goodid=goods.id where have.userid='$userId'";
+        $query = "select goods.name from have inner join goods on have.goodid=goods.id where have.userid='$userId'";
         $result = $this->mydb->query($query);
         $goods = array();
         while($eachGoods=$this->mydb->fetch_array($result)){
@@ -194,7 +200,7 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         include_once 'config.php';
         $freeNum = MAXGOODSNUM - $goodsNum;
 
-        $contentStr = "您上一次定位是在${label}。\n";
+        $contentStr = "您上一次定位是在[${x},${y}] ${label}。\n";
 
         if(!empty($goods)){
             $contentStr .= "您拥有${goodsNum}单位物品\n";
@@ -209,7 +215,27 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     }
 
     private function sendShow(){
-        $this->uncomplete();
+        $articles = array();
+        $articles[0]['title'] = "您的位置";
+        $articles[0]['desc'] = "您目前所在位置";
+        
+        $query = "select x,y from users where id='$this->follower'";
+        $result = $this->mydb->query($query);
+        $location = $this->mydb->fetch_array($result);
+        if(empty($location)){
+            $contentStr = "未找到您的位置信息或者您的位置信息过时，请确认是否已发送位置信息！";
+            $this->echoText($contentStr);
+            return;
+        }
+        
+        $location_x = $location['x'];
+        $location_y = $location['y'];
+
+        include_once 'config.php';
+        $articles[0]['url'] = ROOTURL.'map.php?x=' . $location_x . '&y=' . $location_y; 
+        $articles[0]['picurl'] = $articles[0]['url'];
+        
+        $this->echoPicText($articles);    
     }
     
     private function removeGoods($goods){
@@ -233,6 +259,43 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     private function mergeGoods($goods){
         $this->uncomplete();
     }
-    
+
+    private function echoPicText($articles){
+        $picTextHeader = "<xml>
+ <ToUserName><![CDATA[%s]]></ToUserName>
+ <FromUserName><![CDATA[%s]]></FromUserName>
+ <CreateTime>%s</CreateTime>
+ <MsgType><![CDATA[news]]></MsgType>
+ <ArticleCount>%s</ArticleCount>
+ <Articles>";
+        $picTextArticle = "
+ <item>
+ <Title><![CDATA[%s]]></Title> 
+ <Description><![CDATA[%s]]></Description>
+ <PicUrl><![CDATA[%s]]></PicUrl>
+ <Url><![CDATA[%s]]></Url>
+ </item>";
+        $picTextFooter = "
+ </Articles>
+ <FuncFlag>1</FuncFlag>
+ </xml>";
+        $toUser = $this->follower;
+        $fromuser = $this->myself;
+        $createTime = time();
+        $articleCount = count($articles);
+
+        $contentStr = sprintf($picTextHeader,$toUser,$fromuser,$createTime,$articleCount);
+        foreach($articles as $value){
+            $title = $value['title'];
+            $description = $value['desc'];
+            $picurl = $value['picurl'];
+            $url = $value['url'];
+            $contentStr .=  sprintf($picTextArticle,$title,$description,$picurl,$url);
+        }
+
+        $contentStr .= $picTextFooter;
+        $contentStr = trim($contentStr);
+        echo $contentStr;
+    }
 }
 ?>
