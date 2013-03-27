@@ -6,9 +6,10 @@
  ************************************************************************/
 
 CREATE TABLE users (
-    id int(11) NOT NULL AUTO_INCREMENT,
+    id varchar(70) NOT NULL,
     x double,
     y double,
+    label text,
     PRIMARY KEY (id)
     );
 
@@ -19,7 +20,7 @@ CREATE TABLE map (
     goodid int(11) REFERENCES goods(id),
     goodnum int(11),
     scale int(11),
-    lable text,
+    label text,
     PRIMARY KEY (id)
     );
 
@@ -33,7 +34,7 @@ CREATE TABLE goods(
 
 CREATE TABLE have(
     id int(11) NOT NULL AUTO_INCREMENT,
-    userid int(11) NOT NULL REFERENCES users(id),
+    userid varchar(70) NOT NULL REFERENCES users(id),
     goodid int(11) NOT NULL REFERENCES goods(id),
     PRIMARY KEY (id)
     );

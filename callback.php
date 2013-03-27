@@ -1,12 +1,25 @@
 <?php
-include_once 'Mysql.php';
 
 class MyCallback
 {
     private $postObj;
     private $follower;//订阅公众账号的人
     private $myself;//我自己
-	public function valid()
+
+    private $mydb;
+
+    function __construct(){
+        include_once 'Mysql.php';
+        include_once 'config.php';
+        $this->mydb = new MyDatabase;
+        $this->mydb->connect($hostname,$dbuser,$dbpassword,$dbname);
+        $this->mydb->query("set names utf8");
+    }
+
+    function __destruct(){
+    }
+
+    public function valid()
     {
         $echoStr = $_GET["echostr"];
         //valid signature , option
@@ -58,6 +71,9 @@ class MyCallback
                         case "get":
                             $this->getGoods(array_slice($keyword,1));
                             break;
+                        case "merge":
+                            $this->mergeGoods(array_slice($keyword,1));
+                            break;
                         default:
                             $this->otherMsg(); 
                     }
@@ -79,6 +95,7 @@ class MyCallback
     }
 	private function checkSignature()
 	{
+        include_once 'config.php';
         $signature = $_GET["signature"];
         $timestamp = $_GET["timestamp"];
         $nonce = $_GET["nonce"];	
@@ -133,11 +150,12 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
 
     private function checkUser(){
         $userId = $this->follower;
-        $query = "select id from users where id='$userId'";
-        $result = $db->query($query);
-        if(empty($result)){
-            $query = "insert into users(id,x,y) values($userId,null,null)";
-            $db->query($query);
+        $query = "select * from users where id='$userId'";
+        $result = $this->mydb->query($query);
+        $followers = $this->mydb->fetch_array($result);
+        if(empty($followers)){
+            $query = "insert into users(id) values('$userId')";
+            $insertResult = $this->mydb->query($query);
         }
     }
 
@@ -152,12 +170,42 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     }
 
     private function uncomplete(){
-        $contentStr = "该功能项未开发完成，敬请期待！";
+        $contentStr = "该功能尚未开发完成，敬请期待！";
         $this->echoText($contentStr);
     }
 
     private function sendStatus(){
-        $this->uncomplete();
+        $userId = $this->follower;
+        $query = "select x,y,label from users where id='$userId'";
+        $result = $this->mydb->query($query);
+        $location = $this->mydb->fetch_array($result);
+        $x = $location['x'];
+        $y = $location['y'];
+        $label = $location['label'];
+
+        $query = "select goods.name from have join goods on have.goodid=goods.id where have.userid='$userId'";
+        $result = $this->mydb->query($query);
+        $goods = array();
+        while($eachGoods=$this->mydb->fetch_array($result)){
+            $goods[] = $eachGoods;
+        };
+
+        $goodsNum = count($goods);
+        include_once 'config.php';
+        $freeNum = MAXGOODSNUM - $goodsNum;
+
+        $contentStr = "您上一次定位是在${label}。\n";
+
+        if(!empty($goods)){
+            $contentStr .= "您拥有${goodsNum}单位物品\n";
+            foreach ($goods as $value){
+                $contentStr .= $value . " ";
+            }
+        }
+
+        $contentStr .= "您的背包还剩下${freeNum}单位的空间。";
+            
+        $this->echoText($contentStr);
     }
 
     private function sendShow(){
@@ -173,9 +221,18 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     }
 
     private function setLocation(){
+        $userId = $this->follower;
+        $location_x = $this->postObj->Location_X;
+        $location_y = $this->postObj->Location_Y;
+        $scale = $this->postObj->Scale;
+        $label = $this->postObj->Label;
+        $query = "update users set x=$location_x,y=$location_y,label='$label' where id='$userId'";
+        $result = $this->mydb->query($query);
+    }
+    
+    private function mergeGoods($goods){
         $this->uncomplete();
     }
-
     
 }
 ?>
