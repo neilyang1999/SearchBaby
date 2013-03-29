@@ -90,6 +90,7 @@ class MyCallback
                 $event = $this->postObj->Event;
                 if($event == "subscribe"){
                     $this->checkUser();
+                    $this->sendEmpty();
                 }
             }else{
                 $this->sendTypeError();
