@@ -135,12 +135,13 @@ class MyCallback
     }
 
     private function sendhelp(){
+        include_once 'config.php';
         $contentStr = "
     寻宝江湖是一款基于LBS的沙盒小游戏，游戏地图即现实地图，当您所在位置对应的虚拟世界存在物品，则您可以通过相应命令获取到.对于您已经拥有的物品，您可以对他们进行拆解，或者合成新的物品。下面是一些您可以使用的命令：
 help：查看此帮助；
 status：查看您已有的物品，还能携带的物品数，及其他个人资料；
 show：查看附近是否有物品可以获取。发送此命令前您需要先上传您的位置；
-get [物品名称 物品多称]...：获取物品，多个物品请用空格隔开，该物品必须在您所在位置100米内，不加物品名称则默认为离您最近的物品；
+get [物品名称 物品多称]...：获取物品，多个物品请用空格隔开，该物品必须在您所在位置" .GETLEN ."个经纬度内，不加物品名称则会在您附近随机选取一个物品；
 put [物品名称 物品多称]...：放下（扔掉）物品，多个物品请用空格隔开，不加物品名称则默认为您物品栏中最后一个物品。您放下的任何物品可以被任何一个人捡起；
 merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品必需是您已经持有的物品；
 
@@ -217,7 +218,6 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     private function sendShow(){
         $articles = array();
         $articles[0]['title'] = "您的位置";
-        $articles[0]['desc'] = "您目前所在位置";
         
         $query = "select x,y from users where id='$this->follower'";
         $result = $this->mydb->query($query);
@@ -232,9 +232,26 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $location_y = $location['y'];
 
         include_once 'config.php';
-        $articles[0]['url'] = ROOTURL.'map.php?x=' . $location_x . '&y=' . $location_y; 
+        $articles[0]['url'] = ROOTURL.'map.php?x=\'' . $location_x . '\'&y=\'' . $location_y . '\''; 
         $articles[0]['picurl'] = $articles[0]['url'];
         
+        $goods = $this->neighborGoods($location_x,$location_y,SHOWLEN);
+        $goodsNum = count($goods);
+        $description = "您目前在[" . $location_x . "," . $location_y ."],您附近大约有" . $goodsNum . "份物品";
+        if($goodsNum > 0){
+            $description .= "：";
+        }
+        for($i = 0; $i < $goodsNum; ++$i){
+            $description .= $goods[$i]['name'];
+            if($i >= 5){
+                $description .= "..";
+                break;
+            }else{
+                $description .= " ";
+            }
+        }
+        
+        $articles[0]['desc'] = trim($description);
         $this->echoPicText($articles);    
     }
     
@@ -243,6 +260,9 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     }
 
     private function getGoods($goods){
+        include_once 'config.php';
+        $neighborGoods = $this->neighborGoods($location_x,$location_y,GETLEN);
+
         $this->uncomplete();
     }
 
@@ -254,6 +274,9 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $label = $this->postObj->Label;
         $query = "update users set x=$location_x,y=$location_y,label='$label' where id='$userId'";
         $result = $this->mydb->query($query);
+        
+        $contentStr = "您的位置已更新，您现在在：[" . $location_x . "," . $location_y . "]";
+        $this->echoText($contentStr);
     }
     
     private function mergeGoods($goods){
@@ -297,5 +320,15 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $contentStr = trim($contentStr);
         echo $contentStr;
     }
+
+	private function neighborGoods($x,$y,$neighLen){
+        $query = "select goods.name,map.x,map.y from goods inner join map on goods.id=map.goodid where map.x<$x+$neighLen and map.x>$x-$neighLen and map.y>$y-$neighLen and map.y<$y+$neighLen";
+        $result = $this->mydb->query($query);
+		$goods = array();
+		while($good = $this->mydb->fetch_array($result)){
+			$goods[] = $good; 
+		}
+		return $goods;	
+	}
 }
 ?>
