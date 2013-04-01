@@ -8,11 +8,11 @@
  
 class MyCallback
 {
-    private $postObj;
+    private $postObj;//收到的post数据
     private $follower;//订阅公众账号的人
     private $myself;//我自己
 
-    private $mydb;
+    private $mydb;//数据库实例
 
     function __construct(){
         include_once 'Mysql.php';
@@ -25,6 +25,9 @@ class MyCallback
     function __destruct(){
     }
 
+    /*
+     * 微信公众平台验证函数
+     */
     public function valid()
     {
         $echoStr = $_GET["echostr"];
@@ -34,10 +37,13 @@ class MyCallback
         	exit;
         }
     }
+
+    /*
+     * 获取post数据并对之响应
+     */
     public function responseMsg($postStr='')
     {
-	//get post data, May be due to the different environments
-	//$postStr = $GLOBALS["HTTP_RAW_POST_DATA"];
+	    //获取post数据
         if(empty($postStr))
             $postStr = file_get_contents('php://input');
 
@@ -46,7 +52,7 @@ class MyCallback
         $fileHandle = new rwFile("receive.log");
         $fileHandle->write($postStr);
 
-      	//extract post data
+      	//解析post数据
 		if (!empty($postStr)){
             $this->postObj = simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
             $this->follower = $this->postObj->FromUserName;
@@ -100,6 +106,10 @@ class MyCallback
         	exit;
         }
     }
+
+    /*
+     * 公众平台验证
+     */
 	private function checkSignature()
 	{
         include_once 'config.php';
@@ -117,6 +127,10 @@ class MyCallback
 			return false;
 		}
 	}
+
+    /*
+     * 格式化输出（返回）text类信息
+     */
     private function echoText($contentStr){
         $msgType = "text";
         $time = time();
@@ -135,6 +149,9 @@ class MyCallback
         echo $resultStr;
     }
 
+    /*
+     * 输出（返回）help信息
+     */
     private function sendhelp(){
         include_once 'config.php';
         $contentStr = "
@@ -150,12 +167,19 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
 ";
         $this->echoText($contentStr);
     }
+
+    /*
+     * 收到空消息时的响应信息，初次订阅亦会返回此信息
+     */
     private function sendEmpty(){
     	$contentStr = "欢迎来到寻宝江湖，发送help可查看游戏玩法。
     注意：该游戏还在开发中，如果您无帮助开发者测试的意愿，请及时退订。如您有任何想法，欢迎回复告知我。";
         $this->echoText($contentStr);
     }
 
+    /*
+     * 检查用户是否已在数据库中有数据，若无则将之加入数据库
+     */
     private function checkUser(){
         $userId = $this->follower;
         $query = "select * from users where id='$userId'";
@@ -167,21 +191,34 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         }
     }
 
+    /*
+     * 收到未知消息时的响应信息
+     * Todo：将信息写入数据库以作分析，及对可能的反馈信息作回复
+     */
     private function otherMsg(){
         $contentStr = "对不起，您输入的命令我无法理解。";
         $this->echoText($contentStr);
     }
 
+    /*
+     * 收到消息的类型未支持时的响应信息
+     */
     private function sendTypeError(){
         $contentStr = "目前尚不支持此类型消息。";
         $this->echoText($contentStr);
     }
 
+    /*
+     * 对开发未完成功能的返回信息
+     */
     private function uncomplete(){
         $contentStr = "该功能尚未开发完成，敬请期待！";
         $this->echoText($contentStr);
     }
 
+    /*
+     * 对status命令的响应
+     */
     private function sendStatus(){
         $userId = $this->follower;
         $query = "select x,y,label from users where id='$userId'";
@@ -216,6 +253,9 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $this->echoText($contentStr);
     }
 
+    /*
+     * 对show命令的响应
+     */
     private function sendShow(){
         $articles = array();
         $articles[0]['title'] = "您的位置";
@@ -256,10 +296,18 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $this->echoPicText($articles);    
     }
     
+    /*
+     * 对put命令的响应
+     * Todo：待完成
+     */
     private function removeGoods($goods){
         $this->uncomplete();
     }
 
+    /*
+     * 对get命令的响应
+     * Todo:待完成
+     */
     private function getGoods($goods){
         include_once 'config.php';
         $neighborGoods = $this->neighborGoods($location_x,$location_y,GETLEN);
@@ -267,6 +315,9 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $this->uncomplete();
     }
 
+    /*
+     * 对发送位置信息的响应
+     */
     private function setLocation(){
         $userId = $this->follower;
         $location_x = $this->postObj->Location_X;
@@ -280,10 +331,17 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         $this->echoText($contentStr);
     }
     
+    /*
+     * 对merge命令的响应
+     * Todo:待完成
+     */
     private function mergeGoods($goods){
         $this->uncomplete();
     }
 
+    /*
+     * 对图文类信息的格式化输出（返回）
+     */
     private function echoPicText($articles){
         $picTextHeader = "<xml>
  <ToUserName><![CDATA[%s]]></ToUserName>
@@ -322,6 +380,13 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
         echo $contentStr;
     }
 
+    /*
+     * 查看并返回指定位置指定范围内存在的物品
+     * @x：经度
+     * @y：纬度
+     * @neihghLen:要查找显示的范围
+     * @return:包含物品信息的数组
+     */
 	private function neighborGoods($x,$y,$neighLen){
         $query = "select goods.name,map.x,map.y from goods inner join map on goods.id=map.goodid where map.x<$x+$neighLen and map.x>$x-$neighLen and map.y>$y-$neighLen and map.y<$y+$neighLen";
         $result = $this->mydb->query($query);

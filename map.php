@@ -5,6 +5,9 @@
  mail: chliny11@gmail.com
  Created Time: 2013年03月27日 星期三 14时47分55秒
 ************************************************************************/
+/*
+ * 地图信息类
+ */
 class MyMap{
 
     private $x;
@@ -12,6 +15,9 @@ class MyMap{
     private $mapDb;
     private $neighborGoods;
 
+   /*
+    * 创建并显示一张地图
+    */ 
     public function createMap(){
         $header = '<!DOCTYPE html>
             <html>
@@ -33,12 +39,18 @@ class MyMap{
     echo $header . $body;
     }
 
+    /*
+     * 地图页面的script部分，主要是scritpt函数
+     */
     private function createScript(){
         $script = '<script type="text/javascript">' . $this->initialize();
         $script .= '</script>';
         return $script;
     }
 
+    /*
+     * 初始化地图的javascript函数
+     */
     private function initialize(){
         $function =  'function initialize() {
         var mapOptions = {
@@ -53,6 +65,9 @@ class MyMap{
         return $function;
     }
 
+    /*
+     * 显示用户所在位置的图标
+     */
     private function makeLocationIcon(){
         $function = '
         var marker = new google.maps.Marker({
@@ -64,6 +79,10 @@ class MyMap{
         return $function; 
     }
 
+    /*
+     * 显示物品
+     * TODO:待完善
+     */
     private function makeGoodsIcon(){
         $this->getGoods();
         if(empty($this->neighborGoods)){
@@ -91,11 +110,17 @@ class MyMap{
         return $function;
     }
 
+    /*
+     * 将xy座标格式化成适合google地图的位置变量
+     */
     private function getLating($x,$y){
         $lating = 'new google.maps.LatLng(' . $x . ',' . $y .')';
         return $lating;
     }
 
+    /*
+     * 获取附件物品，将获取到的物品信息以数组形式赋值给$this->neighborGoods
+     */
     private function getGoods(){
         $query = "select goods.name,map.x,map.y from goods inner join map on goods.id=map.goodid where (map.x<$this->x+0.01 and map.x>$this->x-0.01) and (map.y >= ($this->y-0.01) and map.y <= ($this->y+0.01))";
         $result = $this->mapDb->query($query);
