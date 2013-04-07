@@ -311,6 +311,15 @@ merge 物品名称 [物品名称]..：将多个物品合成，被合成的物品
     private function getGoods($goods){
         include_once 'config.php';
         $neighborGoods = $this->neighborGoods($location_x,$location_y,GETLEN);
+        foreach($goods as $perGood){
+            if(in_array($perGood,$neighborGoods['name'])){
+                $query = "insert into have(goodid,userid) (select id from goods where name='$perGood' union on $this->follower)";
+                $this->mydb->query($query);
+            }else{
+               $textStr = "您附近没有$perGood！";
+               $this->echoText($textStr);
+            }
+        }
 
         $this->uncomplete();
     }
